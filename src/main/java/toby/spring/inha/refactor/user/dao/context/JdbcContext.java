@@ -81,6 +81,4 @@ public class JdbcContext {
             }
         );
     }
-
-    public
 }

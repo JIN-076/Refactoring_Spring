@@ -1,0 +1,107 @@
+package toby.spring.inha.refactor.user.dao;
+
+import org.springframework.dao.EmptyResultDataAccessException;
+import toby.spring.inha.refactor.user.dao.context.JdbcContext;
+import toby.spring.inha.refactor.user.dao.strategy.StatementStrategy;
+import toby.spring.inha.refactor.user.domain.User;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class UserDao {
+
+    private JdbcContext jdbcContext;
+    private final DataSource dataSource;
+
+    public UserDao(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public void setJdbcContext(JdbcContext jdbcContext) {
+        this.jdbcContext = jdbcContext;
+    }
+
+    public void add(final User user) throws SQLException {
+
+        this.jdbcContext.executeSql("insert into users(id, name, password) values(?, ?, ?)",
+                user.getId(), user.getName(), user.getPassword());
+    }
+
+    public User get(String id) throws SQLException {
+        Connection c = dataSource.getConnection();
+        PreparedStatement ps = c.prepareStatement("select * from users where id = ?");
+        ps.setString(1, id);
+
+        ResultSet resultSet = ps.executeQuery();
+
+        User user = null;
+        if (resultSet.next()) {
+            user = new User();
+            user.setId(resultSet.getString("id"));
+            user.setName(resultSet.getString("name"));
+            user.setPassword(resultSet.getString("password"));
+        }
+
+        resultSet.close();
+        ps.close();
+        c.close();
+
+        if (user == null) throw new EmptyResultDataAccessException(1);
+
+        return user;
+    }
+
+    /**
+     * 클라이언트의 책임을 갖도록 재구성한 deleteAll() -> 전략 패턴의 클라이언트로서 컨텍스ㄹ에 해당하는 메서드에 적절한 전략 제공
+     * 선정한 전략 클래스의 오브젝트를 생성
+     * 컨텍스트를 호출할 때, 선정한 전략 클래스의 오브젝트를 전달
+     */
+
+    public void deleteAll() throws SQLException {
+        this.jdbcContext.executeSql("delete from users");
+    }
+
+    public int getCount() throws SQLException {
+        Connection c = null;
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
+
+        try {
+            c = dataSource.getConnection();
+            ps = c.prepareStatement("select count(*) from users");
+
+            resultSet = ps.executeQuery();
+            resultSet.next();
+            return resultSet.getInt(1);
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+
+            /**
+             * close()는 만들어진 순서의 반대로 하는 것이 원칙
+             */
+
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {}
+            }
+
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {}
+            }
+
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {}
+            }
+        }
+    }
+
+}

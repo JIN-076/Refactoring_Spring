@@ -15,7 +15,7 @@ import toby.spring.inha.refactor.ctx.AppCtx;
 /**
  * beanDefinition = appCtx, object = toby.spring.inha.refactor.ctx.AppCtx$$EnhancerBySpringCGLIB$$6ca8c71e@41477a6d
  * beanDefinition = dataSourceConfig, object = toby.spring.inha.refactor.config
- * beanDefinition = userDao, object = toby.spring.inha.refactor.user.dao.UserDao@1eea9d2d
+ * beanDefinition = userDao, object = toby.spring.inha.refactor.user.dao.UserDaoV1@1eea9d2d
  * beanDefinition = mysqlDataSource, object = org.springframework.jdbc.datasource.DriverManagerDataSource@1b9c1b51
  */
 

@@ -19,6 +19,9 @@ import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.domain.User;
 
 import java.sql.SQLException;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @Test JUnit -> @Test 메서드를 실행할 때마다 새로운 오브젝트를 생성
@@ -97,5 +100,38 @@ public class UserDaoTest {
         Assertions.assertThrows(EmptyResultDataAccessException.class, () -> {
             dao.get("unknown_id");
         });
+    }
+
+    @Test
+    @DisplayName("현재 등록된 모든 사용자 정보를 가져오는 테스트")
+    public void getAll() throws SQLException {
+        dao.deleteAll();
+
+        List<User> users0 = dao.getAll();
+        assertThat(users0.size()).isEqualTo(0);
+
+        dao.add(userA);
+        List<User> usersA = dao.getAll();
+        assertThat(usersA.size()).isEqualTo(1);
+        checkSameUser(userA, usersA.get(0));
+
+        dao.add(userB);
+        List<User> usersB = dao.getAll();
+        assertThat(usersB.size()).isEqualTo(2);
+        checkSameUser(userA, usersB.get(0));
+        checkSameUser(userB, usersB.get(1));
+
+        dao.add(userC);
+        List<User> usersC = dao.getAll();
+        assertThat(usersC.size()).isEqualTo(3);
+        checkSameUser(userA, usersC.get(0));
+        checkSameUser(userB, usersC.get(1));
+        checkSameUser(userC, usersC.get(2));
+    }
+
+    private void checkSameUser(User userA, User userB) {
+        assertThat(userA.getId()).isEqualTo(userB.getId());
+        assertThat(userA.getName()).isEqualTo(userB.getName());
+        assertThat(userA.getPassword()).isEqualTo(userB.getPassword());
     }
 }
