@@ -10,12 +10,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import toby.spring.inha.refactor.config.DataSourceConfig;
 import toby.spring.inha.refactor.ctx.AppCtx;
 import toby.spring.inha.refactor.user.dao.UserDao;
+import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.domain.User;
 
 import java.sql.SQLException;
@@ -30,7 +32,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {AppCtx.class, DataSourceConfig.class})
+@ComponentScan(
+        basePackages = "toby.spring.inha.refactor",
+        basePackageClasses = UserDao.class
+)
+@ContextConfiguration(classes = {UserDao.class, DataSourceConfig.class, UserMapper.class})
 public class UserDaoTest {
 
     @Autowired

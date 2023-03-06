@@ -26,15 +26,12 @@ import java.sql.SQLException;
 //@Configuration
 public class AppCtx {
 
-    /**
     @Autowired
     private DataSourceConfig dataSourceConfig;
 
     @Autowired
     private RowMapper<User> userRowMapper;
-    */
 
-    /**
     @Bean
     public UserDao userDao() {
         UserDao userDao = new UserDao();
@@ -42,5 +39,4 @@ public class AppCtx {
         userDao.setUserRowMapper(userRowMapper);
         return userDao;
     }
-    */
 }

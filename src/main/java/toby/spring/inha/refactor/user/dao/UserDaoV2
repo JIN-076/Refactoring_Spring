@@ -54,12 +54,6 @@ public class UserDao {
         return user;
     }
 
-    /**
-     * 클라이언트의 책임을 갖도록 재구성한 deleteAll() -> 전략 패턴의 클라이언트로서 컨텍스ㄹ에 해당하는 메서드에 적절한 전략 제공
-     * 선정한 전략 클래스의 오브젝트를 생성
-     * 컨텍스트를 호출할 때, 선정한 전략 클래스의 오브젝트를 전달
-     */
-
     public void deleteAll() throws SQLException {
         this.jdbcContext.executeSql("delete from users");
     }
