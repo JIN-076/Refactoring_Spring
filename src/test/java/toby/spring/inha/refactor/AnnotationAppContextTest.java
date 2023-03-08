@@ -9,8 +9,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import toby.spring.inha.refactor.config.DataSourceConfig;
-import toby.spring.inha.refactor.ctx.AppCtx;
-import toby.spring.inha.refactor.user.dao.UserDao;
+import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 
 /**
@@ -33,7 +32,7 @@ import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
  */
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {UserDao.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 //@EnableConfigurationProperties(value = {AppCtx.class, DataSourceConfig.class})
 @TestPropertySource("classpath:/application.properties")
 public class AnnotationAppContextTest {

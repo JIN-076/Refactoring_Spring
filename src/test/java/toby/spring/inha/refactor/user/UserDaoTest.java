@@ -1,7 +1,5 @@
 package toby.spring.inha.refactor.user;
 
-import org.apache.el.parser.AstSetData;
-import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,17 +7,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.jdbc.support.SQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import toby.spring.inha.refactor.config.DataSourceConfig;
-import toby.spring.inha.refactor.ctx.AppCtx;
 import toby.spring.inha.refactor.user.dao.UserDao;
+import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.domain.User;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -34,9 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(SpringExtension.class)
 @ComponentScan(
         basePackages = "toby.spring.inha.refactor",
-        basePackageClasses = UserDao.class
+        basePackageClasses = UserDaoJdbc.class
 )
-@ContextConfiguration(classes = {UserDao.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserDaoTest {
 
     @Autowired
@@ -44,6 +46,10 @@ public class UserDaoTest {
 
     @Autowired
     private UserDao dao;
+
+    @Autowired
+    private DataSource dataSource;
+
     private User userA;
     private User userB;
     private User userC;
@@ -139,5 +145,30 @@ public class UserDaoTest {
         assertThat(userA.getId()).isEqualTo(userB.getId());
         assertThat(userA.getName()).isEqualTo(userB.getName());
         assertThat(userA.getPassword()).isEqualTo(userB.getPassword());
+    }
+
+    @Test
+    public void duplicateKey() {
+        dao.deleteAll();
+
+        dao.add(userA);
+        Assertions.assertThrows(DuplicateKeyException.class, () -> {
+            dao.add(userA);
+        });
+    }
+
+    @Test
+    public void sqlExceptionTranslate() {
+        dao.deleteAll();
+
+        try {
+            dao.add(userA);
+            dao.add(userA);
+        } catch (DuplicateKeyException ex) {
+            SQLException sqlException = (SQLException)ex.getRootCause();
+            SQLExceptionTranslator translator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+
+            assertThat(translator.translate(null, null, sqlException)).isInstanceOf(DuplicateKeyException.class);
+        }
     }
 }

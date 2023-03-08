@@ -1,20 +1,5 @@
 package toby.spring.inha.refactor.ctx;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import toby.spring.inha.refactor.config.DataSourceConfig;
-import toby.spring.inha.refactor.user.dao.UserDao;
-import toby.spring.inha.refactor.user.dao.context.JdbcContext;
-import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
-import toby.spring.inha.refactor.user.domain.User;
-
-import javax.sql.DataSource;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 /**
  * beanDefinition = appCtx, object = toby.spring.inha.refactor.ctx.AppCtx$$EnhancerBySpringCGLIB$$5545e069@56781d96
  * beanDefinition = dataSourceConfig, object = toby.spring.inha.refactor.config
