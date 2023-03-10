@@ -11,6 +11,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import toby.spring.inha.refactor.config.DataSourceConfig;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
+import toby.spring.inha.refactor.user.service.UserService;
 
 /**
  * @Configuration 수동 주입 방식과 수정자, 필드 주입 방식을 이용한 Bean Register
@@ -24,7 +25,8 @@ import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 /**
  * @Component 자동 주입 방식과 생성자 주입 방식을 이용한 Bean Register
  *
- * beanDefinition = userDao, object = toby.spring.inha.refactor.user.dao.UserDao@67a056f1
+ * beanDefinition = userService, object = toby.spring.inha.refactor.user.service.UserService@4bff2185
+ * beanDefinition = userDaoJdbc, object = toby.spring.inha.refactor.user.dao.UserDaoJdbc@afb5821
  * beanDefinition = dataSourceConfig, object = toby.spring.inha.refactor.config.DataSourceConfig$$EnhancerBySpringCGLIB$$e675979b@1ec7d8b3
  * beanDefinition = userMapper, object = toby.spring.inha.refactor.user.dao.mapper.UserMapper$$EnhancerBySpringCGLIB$$ae22ed64@bd2f5a9
  * beanDefinition = mysqlDataSource, object = org.springframework.jdbc.datasource.DriverManagerDataSource@2e52fb3e
@@ -32,7 +34,7 @@ import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
  */
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {UserService.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 //@EnableConfigurationProperties(value = {AppCtx.class, DataSourceConfig.class})
 @TestPropertySource("classpath:/application.properties")
 public class AnnotationAppContextTest {

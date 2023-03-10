@@ -19,6 +19,7 @@ import toby.spring.inha.refactor.config.DataSourceConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
+import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
 
 import javax.sql.DataSource;
@@ -56,9 +57,9 @@ public class UserDaoTest {
 
     @BeforeEach
     public void setUp() {
-        this.userA = new User("1234", "이유노", "yuNoh");
-        this.userB = new User("1235", "안유정", "tanGuRae");
-        this.userC = new User("1236", "라찬엽", "raDoll");
+        this.userA = new User("1234", "이유노", "yuNoh", Level.BASIC, 1, 0);
+        this.userB = new User("1235", "안유정", "tanGuRae", Level.SILVER, 55, 10);
+        this.userC = new User("1236", "라찬엽", "raDoll", Level.GOLD, 100, 40);
     }
 
     @Test
@@ -73,10 +74,12 @@ public class UserDaoTest {
         Assertions.assertEquals(dao.getCount(), 2);
 
         User userGetA = dao.get(userA.getId());
+        checkSameUser(userGetA, userA);
         Assertions.assertEquals(userGetA.getName(), userA.getName());
         Assertions.assertEquals(userGetA.getPassword(), userA.getPassword());
 
         User userGetB = dao.get(userB.getId());
+        checkSameUser(userGetB, userB);
         Assertions.assertEquals(userGetB.getName(), userB.getName());
         Assertions.assertEquals(userGetB.getPassword(), userB.getPassword());
     }
@@ -145,6 +148,9 @@ public class UserDaoTest {
         assertThat(userA.getId()).isEqualTo(userB.getId());
         assertThat(userA.getName()).isEqualTo(userB.getName());
         assertThat(userA.getPassword()).isEqualTo(userB.getPassword());
+        assertThat(userA.getLevel()).isEqualTo(userB.getLevel());
+        assertThat(userA.getLogin()).isEqualTo(userB.getLogin());
+        assertThat(userA.getRecommend()).isEqualTo(userB.getRecommend());
     }
 
     @Test
@@ -170,5 +176,27 @@ public class UserDaoTest {
 
             assertThat(translator.translate(null, null, sqlException)).isInstanceOf(DuplicateKeyException.class);
         }
+    }
+
+    @Test
+    @DisplayName("사용자 수정 테스트")
+    public void update() {
+        dao.deleteAll();
+
+        dao.add(userB);
+        dao.add(userA);
+
+        userB.setName("최진우");
+        userB.setPassword("jinWoo");
+        userB.setLevel(Level.GOLD);
+        userB.setLogin(1000);
+        userB.setRecommend(999);
+        dao.update(userB);
+
+        User userBUpdate = dao.get(userB.getId());
+        checkSameUser(userB, userBUpdate);
+
+        User userASame = dao.get(userA.getId());
+        checkSameUser(userA, userASame);
     }
 }
