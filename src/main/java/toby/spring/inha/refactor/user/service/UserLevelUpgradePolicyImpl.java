@@ -12,8 +12,12 @@ import static toby.spring.inha.refactor.user.service.UserService.MIN_RECOMMEND_F
 @Component
 public class UserLevelUpgradePolicyImpl implements UserLevelUpgradePolicy {
 
+    private final UserDao userDao;
+
     @Autowired
-    private UserDao userDao;
+    public UserLevelUpgradePolicyImpl(UserDao userDao) {
+        this.userDao = userDao;
+    }
 
     @Override
     public boolean canUpgradeLevel(User user) {

@@ -1,5 +1,6 @@
 package toby.spring.inha.refactor.user.service;
 
+import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.domain.User;
 
 public interface UserLevelUpgradePolicy {

@@ -15,9 +15,11 @@ import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
+import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicy;
 import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicyImpl;
 import toby.spring.inha.refactor.user.service.UserService;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,7 +37,27 @@ public class UserServiceTest {
     @Autowired
     private UserDao userDao;
 
+    @Autowired
+    private DataSource dataSource;
+
     List<User> users;
+
+    static class TestUserPolicyException extends RuntimeException {}
+
+    static class TestUserPolicy extends UserLevelUpgradePolicyImpl {
+
+        private String id;
+
+        private TestUserPolicy(UserDao userDao,String id) {
+            super(userDao);
+            this.id = id;
+        }
+
+        public void upgradeLevel(User user) {
+            if (user.getId().equals(this.id)) throw new TestUserPolicyException();
+            super.upgradeLevel(user);
+        }
+    }
 
     @BeforeEach
     public void setUp() {
@@ -43,7 +65,7 @@ public class UserServiceTest {
                 new User("bumJin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0),
                 new User("joyTouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0),
                 new User("erWins", "신승한", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1),
-                new User("madNite1", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD),
+                new User("madDitto", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD),
                 new User("madGreen", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE)
         );
     }
@@ -97,5 +119,44 @@ public class UserServiceTest {
 
         assertThat(userWithLevelRead.getLevel()).isEqualTo(userWithLevel.getLevel());
         assertThat(userWithoutLevelRead.getLevel()).isEqualTo(userWithoutLevel.getLevel());
+    }
+
+    @Test
+    @DisplayName("upgrade 중단 테스트")
+    public void upgradeAllOrNothing() {
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, users.get(3).getId());
+        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            testUserService.upgradeLevelsRfc();
+            Assertions.fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
+
+        checkLevelUpgraded(users.get(1), false);
+    }
+
+    @Test
+    @DisplayName("Transaction 테스트")
+    public void upgradeAllOrNothingRfc() throws Exception {
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, users.get(3).getId());
+        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
+        testUserService.setDataSource(this.dataSource);
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            testUserService.upgradeLevelsRfc2();
+            Assertions.fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
+
+        checkLevelUpgraded(users.get(1), false);
     }
 }
