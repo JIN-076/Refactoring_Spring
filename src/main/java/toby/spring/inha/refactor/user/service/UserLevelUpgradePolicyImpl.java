@@ -14,9 +14,12 @@ public class UserLevelUpgradePolicyImpl implements UserLevelUpgradePolicy {
 
     private final UserDao userDao;
 
+    private final EmailPolicy emailPolicy;
+
     @Autowired
-    public UserLevelUpgradePolicyImpl(UserDao userDao) {
+    public UserLevelUpgradePolicyImpl(UserDao userDao, EmailPolicy emailPolicy) {
         this.userDao = userDao;
+        this.emailPolicy = emailPolicy;
     }
 
     @Override
@@ -34,5 +37,6 @@ public class UserLevelUpgradePolicyImpl implements UserLevelUpgradePolicy {
     public void upgradeLevel(User user) {
         user.upgradeLevel();
         userDao.update(user);
+        emailPolicy.sendUpgradeEmailRfc(user);
     }
 }

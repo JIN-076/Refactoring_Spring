@@ -11,7 +11,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import toby.spring.inha.refactor.config.DataSourceConfig;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
+import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicyImpl;
 import toby.spring.inha.refactor.user.service.UserService;
+import toby.spring.inha.refactor.user.config.TransactionConfig;
 
 /**
  * @Configuration 수동 주입 방식과 수정자, 필드 주입 방식을 이용한 Bean Register
@@ -34,7 +36,7 @@ import toby.spring.inha.refactor.user.service.UserService;
  */
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {UserService.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TransactionConfig.class, UserLevelUpgradePolicyImpl.class, UserService.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 //@EnableConfigurationProperties(value = {AppCtx.class, DataSourceConfig.class})
 @TestPropertySource("classpath:/application.properties")
 public class AnnotationAppContextTest {

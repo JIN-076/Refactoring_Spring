@@ -57,9 +57,9 @@ public class UserDaoTest {
 
     @BeforeEach
     public void setUp() {
-        this.userA = new User("1234", "이유노", "yuNoh", Level.BASIC, 1, 0);
-        this.userB = new User("1235", "안유정", "tanGuRae", Level.SILVER, 55, 10);
-        this.userC = new User("1236", "라찬엽", "raDoll", Level.GOLD, 100, 40);
+        this.userA = new User("1234", "이유노", "yuNoh", Level.BASIC, 1, 0, "yuNoh@gmail.com");
+        this.userB = new User("1235", "안유정", "tanGuRae", Level.SILVER, 55, 10, "tanGuRae@gmail.com");
+        this.userC = new User("1236", "라찬엽", "raDoll", Level.GOLD, 100, 40, "raDoll@gmail.com");
     }
 
     @Test
@@ -151,6 +151,7 @@ public class UserDaoTest {
         assertThat(userA.getLevel()).isEqualTo(userB.getLevel());
         assertThat(userA.getLogin()).isEqualTo(userB.getLogin());
         assertThat(userA.getRecommend()).isEqualTo(userB.getRecommend());
+        assertThat(userA.getEmail()).isEqualTo(userB.getEmail());
     }
 
     @Test
@@ -191,6 +192,7 @@ public class UserDaoTest {
         userB.setLevel(Level.GOLD);
         userB.setLogin(1000);
         userB.setRecommend(999);
+        userB.setEmail("jinWoo@gmail.com");
         dao.update(userB);
 
         User userBUpdate = dao.get(userB.getId());

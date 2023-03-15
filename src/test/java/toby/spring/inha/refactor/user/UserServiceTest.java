@@ -7,17 +7,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.mail.MailSender;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.transaction.PlatformTransactionManager;
 import toby.spring.inha.refactor.config.DataSourceConfig;
+import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
+import toby.spring.inha.refactor.user.service.EmailPolicy;
 import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicy;
 import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicyImpl;
 import toby.spring.inha.refactor.user.service.UserService;
+import toby.spring.inha.refactor.user.config.TransactionConfig;
 
 import javax.sql.DataSource;
 import java.util.Arrays;
@@ -28,7 +33,11 @@ import static toby.spring.inha.refactor.user.service.UserService.MIN_LOGCOUNT_FO
 import static toby.spring.inha.refactor.user.service.UserService.MIN_RECOMMEND_FOR_GOLD;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {UserLevelUpgradePolicyImpl.class, UserService.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ComponentScan(
+        basePackages = {"toby.spring.inha.refactor"},
+        basePackageClasses = UserService.class
+)
+@ContextConfiguration(classes = {EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserService.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
 
     @Autowired
@@ -40,6 +49,15 @@ public class UserServiceTest {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private EmailPolicy emailPolicy;
+
+    @Autowired
+    private MailSender mailSender;
+
     List<User> users;
 
     static class TestUserPolicyException extends RuntimeException {}
@@ -48,8 +66,8 @@ public class UserServiceTest {
 
         private String id;
 
-        private TestUserPolicy(UserDao userDao,String id) {
-            super(userDao);
+        private TestUserPolicy(UserDao userDao, EmailPolicy emailPolicy, String id) {
+            super(userDao, emailPolicy);
             this.id = id;
         }
 
@@ -62,11 +80,11 @@ public class UserServiceTest {
     @BeforeEach
     public void setUp() {
         users = Arrays.asList(
-                new User("bumJin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0),
-                new User("joyTouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0),
-                new User("erWins", "신승한", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1),
-                new User("madDitto", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD),
-                new User("madGreen", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE)
+                new User("bumJin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "bumJin@gmail.com"),
+                new User("joyTouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "joyTouch@gmail.com"),
+                new User("erWins", "신승한", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1, "erWins@gmail.com"),
+                new User("madDitto", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD, "madDitto@gmail.com"),
+                new User("madGreen", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE, "madGreen@gmail.com")
         );
     }
 
@@ -84,7 +102,7 @@ public class UserServiceTest {
             userDao.add(user);
         }
 
-        userService.upgradeLevelsRfc();
+        userService.upgradeLevelsRfc3();
 
         checkLevelUpgraded(users.get(0), false);
         checkLevelUpgraded(users.get(1), true);
@@ -124,7 +142,8 @@ public class UserServiceTest {
     @Test
     @DisplayName("upgrade 중단 테스트")
     public void upgradeAllOrNothing() {
-        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, users.get(3).getId());
+
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
         UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
 
         userDao.deleteAll();
@@ -143,7 +162,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("Transaction 테스트")
     public void upgradeAllOrNothingRfc() throws Exception {
-        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, users.get(3).getId());
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
         UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
         testUserService.setDataSource(this.dataSource);
 
@@ -153,7 +172,27 @@ public class UserServiceTest {
         }
 
         try {
-            testUserService.upgradeLevelsRfc2();
+            testUserService.upgradeLevelsRfc3();
+            Assertions.fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
+
+        checkLevelUpgraded(users.get(1), false);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 추상화 API 테스트")
+    public void upgradeAllOrNothingRfc2() throws Exception {
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
+        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
+        testUserService.setTransactionManager(this.transactionManager);
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            testUserService.upgradeLevelsRfc4();
             Assertions.fail("TestUserPolicyException expected");
         } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
 
