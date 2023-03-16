@@ -18,10 +18,15 @@ import java.util.Properties;
 @Component
 public class EmailPolicy {
 
-    private final MailSender mailSender;
+    private MailSender mailSender;
+
+//    @Autowired
+//    public EmailPolicy(MailSender mailSender) {
+//        this.mailSender = mailSender;
+//    }
 
     @Autowired
-    public EmailPolicy(MailSender mailSender) {
+    public void setMailSender(MailSender mailSender) {
         this.mailSender = mailSender;
     }
 

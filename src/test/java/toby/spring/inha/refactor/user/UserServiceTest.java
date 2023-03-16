@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.mail.MailSender;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -18,10 +19,7 @@ import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
-import toby.spring.inha.refactor.user.service.EmailPolicy;
-import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicy;
-import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicyImpl;
-import toby.spring.inha.refactor.user.service.UserService;
+import toby.spring.inha.refactor.user.service.*;
 import toby.spring.inha.refactor.user.config.TransactionConfig;
 
 import javax.sql.DataSource;
@@ -80,7 +78,7 @@ public class UserServiceTest {
     @BeforeEach
     public void setUp() {
         users = Arrays.asList(
-                new User("bumJin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "bumJin@gmail.com"),
+                new User("bumJin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0, "bumJin@gmail.com"),
                 new User("joyTouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "joyTouch@gmail.com"),
                 new User("erWins", "신승한", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1, "erWins@gmail.com"),
                 new User("madDitto", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD, "madDitto@gmail.com"),
@@ -197,5 +195,30 @@ public class UserServiceTest {
         } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
 
         checkLevelUpgraded(users.get(1), false);
+    }
+
+    @Test
+    @DirtiesContext
+    public void upgradeAllOrNothingRfc3() throws Exception {
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        MockMailSender mockMailSender = new MockMailSender();
+        emailPolicy.setMailSender(mockMailSender);
+
+        userService.upgradeLevelsRfc4();
+
+        checkLevelUpgraded(users.get(0), false);
+        checkLevelUpgraded(users.get(1), true);
+        checkLevelUpgraded(users.get(2), false);
+        checkLevelUpgraded(users.get(3), true);
+        checkLevelUpgraded(users.get(4), false);
+
+        List<String> request = mockMailSender.getRequests();
+        assertThat(request.size()).isEqualTo(2);
+        assertThat(request.get(0)).isEqualTo(users.get(1).getEmail());
+        assertThat(request.get(1)).isEqualTo(users.get(3).getEmail());
     }
 }
