@@ -20,10 +20,12 @@ public class EmailPolicy {
 
     private MailSender mailSender;
 
-//    @Autowired
-//    public EmailPolicy(MailSender mailSender) {
-//        this.mailSender = mailSender;
-//    }
+    /**
+    @Autowired
+    public EmailPolicy(MailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+    */
 
     @Autowired
     public void setMailSender(MailSender mailSender) {

@@ -53,9 +53,6 @@ public class UserServiceTest {
     @Autowired
     private EmailPolicy emailPolicy;
 
-    @Autowired
-    private MailSender mailSender;
-
     List<User> users;
 
     static class TestUserPolicyException extends RuntimeException {}
@@ -199,7 +196,8 @@ public class UserServiceTest {
 
     @Test
     @DirtiesContext
-    public void upgradeAllOrNothingRfc3() throws Exception {
+    @DisplayName("Mock Object 이용한 테스트")
+    public void upgradeLevelsMock() throws Exception {
         userDao.deleteAll();
         for (User user : users) {
             userDao.add(user);
