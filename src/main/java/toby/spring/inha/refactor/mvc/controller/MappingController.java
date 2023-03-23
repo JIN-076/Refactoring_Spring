@@ -34,25 +34,11 @@ public class MappingController {
         return "OK";
     }
 
-        /**
-         * @RequestMapping
-         * value: 요청받을 url 설정
-         * method: HTTP 메서드 지정 { GET, HEAD, POST, PUT, PATCH, DELETE }
-         *
-         * 만약 지정한 HTTP 메서드가 아닌 다른 요청이 올 경우, Mvc는 HTTP 405 Method Not Allowed를 반환
-         */
-
     @RequestMapping(value = "/mapping-get-v1", method = RequestMethod.GET)
     public String mappingGetV1() {
         log.info("mappingGetV1");
         return "OK";
     }
-
-        /**
-         * @GetMapping("/url")
-         * HTTP 메서드를 축약한 애노테이션을 사용하는 것이 더 직관적
-         * { @GetMapping, @PostMapping, @PutMapping, @DeleteMapping, @PatchMapping }
-         */
 
     @GetMapping(value = "/mapping-get-v2")
     public String mappingGetV2() {
