@@ -1,4 +1,4 @@
-package toby.spring.inha.refactor.mvc.controller;
+package toby.spring.inha.refactor.mvc.controller.requestMapping;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -98,7 +98,7 @@ public class MappingController {
         /**
          * 미디어 타입 조건 매핑 -> HTTP 요청 Content-Type, consume
          *
-         * Content-Type 헤더 기반 추가 매핑 Media Type
+         * Content-Type 헤더 기반 추가 매핑 -> Media Type
          * consumes="application/json"
          * consumes="!application/json"
          * consumes="application/*"
@@ -109,9 +109,15 @@ public class MappingController {
          * 만약 맞지 않으면 HTTP 415 Unsupported Media Type을 반환
          */
 
-    @PostMapping(value = "/mapping-consume", consumes = "applicatiion/json")
+    @PostMapping(value = "/mapping-consume", consumes = "application/json")
     public String mappingConsumes() {
         log.info("mappingConsumes");
+        return "OK";
+    }
+
+    @PostMapping(value = "/mapping-produce", produces = "text/html")
+    public String mappingProduces() {
+        log.info("mappingProduces");
         return "OK";
     }
 }
