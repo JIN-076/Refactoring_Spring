@@ -6,8 +6,8 @@ import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
 
-import static toby.spring.inha.refactor.user.service.UserService.MIN_LOGCOUNT_FOR_SILVER;
-import static toby.spring.inha.refactor.user.service.UserService.MIN_RECOMMEND_FOR_GOLD;
+import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
+import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
 
 @Component
 public class UserLevelUpgradePolicyImpl implements UserLevelUpgradePolicy {

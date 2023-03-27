@@ -12,7 +12,7 @@ import toby.spring.inha.refactor.config.DataSourceConfig;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
 import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicyImpl;
-import toby.spring.inha.refactor.user.service.UserService;
+import toby.spring.inha.refactor.user.service.UserServiceImpl;
 import toby.spring.inha.refactor.user.config.TransactionConfig;
 
 /**
@@ -36,7 +36,7 @@ import toby.spring.inha.refactor.user.config.TransactionConfig;
  */
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {TransactionConfig.class, UserLevelUpgradePolicyImpl.class, UserService.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TransactionConfig.class, UserLevelUpgradePolicyImpl.class, UserServiceImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 //@EnableConfigurationProperties(value = {AppCtx.class, DataSourceConfig.class})
 @TestPropertySource("classpath:/application.properties")
 public class AnnotationAppContextTest {

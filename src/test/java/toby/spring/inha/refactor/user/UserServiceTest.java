@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.mail.MailSender;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -27,15 +26,16 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static toby.spring.inha.refactor.user.service.UserService.MIN_LOGCOUNT_FOR_SILVER;
-import static toby.spring.inha.refactor.user.service.UserService.MIN_RECOMMEND_FOR_GOLD;
+import static org.assertj.core.api.Assertions.fail;
+import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
+import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
 
 @ExtendWith(SpringExtension.class)
 @ComponentScan(
         basePackages = {"toby.spring.inha.refactor"},
-        basePackageClasses = UserService.class
+        basePackageClasses = UserServiceImpl.class
 )
-@ContextConfiguration(classes = {EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserService.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
 
     @Autowired
@@ -97,7 +97,8 @@ public class UserServiceTest {
             userDao.add(user);
         }
 
-        userService.upgradeLevelsRfc3();
+        //userService.upgradeLevelsRfc3();
+        userService.upgradeLevels();
 
         checkLevelUpgraded(users.get(0), false);
         checkLevelUpgraded(users.get(1), true);
@@ -139,7 +140,7 @@ public class UserServiceTest {
     public void upgradeAllOrNothing() {
 
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
 
         userDao.deleteAll();
         for (User user : users) {
@@ -147,8 +148,10 @@ public class UserServiceTest {
         }
 
         try {
-            testUserService.upgradeLevelsRfc();
-            Assertions.fail("TestUserPolicyException expected");
+            // testUserService.upgradeLevelsRfc();
+            testUserService.upgradeLevels();
+
+            fail("TestUserPolicyException expected");
         } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
 
         checkLevelUpgraded(users.get(1), false);
@@ -158,8 +161,11 @@ public class UserServiceTest {
     @DisplayName("Transaction 테스트")
     public void upgradeAllOrNothingRfc() throws Exception {
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
-        testUserService.setDataSource(this.dataSource);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceTx testUserServiceTx = new UserServiceTx();
+
+        testUserServiceTx.setUserService(testUserService);
+        testUserServiceTx.setDataSource(this.dataSource);
 
         userDao.deleteAll();
         for (User user : users) {
@@ -167,8 +173,10 @@ public class UserServiceTest {
         }
 
         try {
-            testUserService.upgradeLevelsRfc3();
-            Assertions.fail("TestUserPolicyException expected");
+            // testUserService.upgradeLevelsRfc3();
+            testUserServiceTx.upgradeLevelsOld();
+
+            fail("TestUserPolicyException expected");
         } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
 
         checkLevelUpgraded(users.get(1), false);
@@ -178,8 +186,11 @@ public class UserServiceTest {
     @DisplayName("트랜잭션 추상화 API 테스트")
     public void upgradeAllOrNothingRfc2() throws Exception {
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserService testUserService = new UserService(this.userDao, userLevelUpgradePolicy);
-        testUserService.setTransactionManager(this.transactionManager);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceTx testUserServiceTx = new UserServiceTx();
+
+        testUserServiceTx.setUserService(testUserService);
+        testUserServiceTx.setTransactionManager(this.transactionManager);
 
         userDao.deleteAll();
         for (User user : users) {
@@ -187,8 +198,8 @@ public class UserServiceTest {
         }
 
         try {
-            testUserService.upgradeLevelsRfc4();
-            Assertions.fail("TestUserPolicyException expected");
+            testUserServiceTx.upgradeLevels();
+            fail("TestUserPolicyException expected");
         } catch (TestUserPolicyException e) {} // TestUserService 가 던지는 예외를 잡아 계속 진행되도록 한다.
 
         checkLevelUpgraded(users.get(1), false);
@@ -206,7 +217,7 @@ public class UserServiceTest {
         MockMailSender mockMailSender = new MockMailSender();
         emailPolicy.setMailSender(mockMailSender);
 
-        userService.upgradeLevelsRfc4();
+        userService.upgradeLevels();
 
         checkLevelUpgraded(users.get(0), false);
         checkLevelUpgraded(users.get(1), true);
