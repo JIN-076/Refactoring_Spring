@@ -16,6 +16,7 @@ import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
 import toby.spring.inha.refactor.user.dao.mapper.UserMapper;
+import toby.spring.inha.refactor.user.dao.mock.MockUserDao;
 import toby.spring.inha.refactor.user.domain.Level;
 import toby.spring.inha.refactor.user.domain.User;
 import toby.spring.inha.refactor.user.service.*;
@@ -229,5 +230,35 @@ public class UserServiceTest {
         assertThat(request.size()).isEqualTo(2);
         assertThat(request.get(0)).isEqualTo(users.get(1).getEmail());
         assertThat(request.get(1)).isEqualTo(users.get(3).getEmail());
+    }
+
+    @Test
+    @DisplayName("MockUserDao를 사용한 고립된 테스트")
+    public void upgradeLevelsMockV2() throws Exception {
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+
+        MockMailSender mockMailSender = new MockMailSender();
+        emailPolicy.setMailSender(mockMailSender);
+
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new UserLevelUpgradePolicyImpl(mockUserDao, emailPolicy);
+
+        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao, userLevelUpgradePolicy);
+
+        userServiceImpl.upgradeLevels();
+
+        List<User> updated = mockUserDao.getUpdated();
+        assertThat(updated.size()).isEqualTo(2);
+        checkUserAndLevel(updated.get(0), "joyTouch", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "madDitto", Level.GOLD);
+
+        List<String> request = mockMailSender.getRequests();
+        assertThat(request.size()).isEqualTo(2);
+        assertThat(request.get(0)).isEqualTo(users.get(1).getEmail());
+        assertThat(request.get(1)).isEqualTo(users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
+        assertThat(updated.getId()).isEqualTo(expectedId);
+        assertThat(updated.getLevel()).isEqualTo(expectedLevel);
     }
 }
