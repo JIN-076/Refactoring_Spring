@@ -305,7 +305,7 @@ public class UserServiceTest {
         transactionHandler.setTarget(userServiceImpl);
         transactionHandler.setTransactionManager(this.transactionManager);
         transactionHandler.setPattern("upgradeLevels");
-        UserService testUserService = (UserService) Proxy.newProxyInstance(
+        UserService txUserService = (UserService) Proxy.newProxyInstance(
                 getClass().getClassLoader(),
                 new Class[]{ UserService.class },
                 transactionHandler);
@@ -316,7 +316,7 @@ public class UserServiceTest {
         }
 
         try {
-            testUserService.upgradeLevels();
+            txUserService.upgradeLevels();
             fail("TestUserPolicyException expected");
         } catch (TestUserPolicyException e) { }
 
