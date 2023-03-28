@@ -15,6 +15,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import toby.spring.inha.refactor.config.DataSourceConfig;
+import toby.spring.inha.refactor.jdk.proxy.TransactionHandler;
 import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
@@ -26,6 +27,7 @@ import toby.spring.inha.refactor.user.service.*;
 import toby.spring.inha.refactor.user.config.TransactionConfig;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 
@@ -289,7 +291,35 @@ public class UserServiceTest {
         // 파라미터를 정밀하게 검사하기 위해 캡처할 수도 있다.
         verify(mockMailSender, times(2)).send(mailMessageArgumentCaptor.capture());
         List<SimpleMailMessage> mailMessages = mailMessageArgumentCaptor.getAllValues();
-        assertThat(mailMessages.get(0).getTo()).isEqualTo(users.get(1).getEmail());
-        assertThat(mailMessages.get(1).getTo()).isEqualTo(users.get(3).getEmail());
+        assertThat(mailMessages.get(0).getTo()[0]).isEqualTo(users.get(1).getEmail());
+        assertThat(mailMessages.get(1).getTo()[0]).isEqualTo(users.get(3).getEmail());
+    }
+
+    @Test
+    @DisplayName("TransactionHandler와 다이내믹 프록시를 이용한 테스트")
+    public void upgradeAllOrNothingProxy() throws Exception {
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
+        UserServiceImpl userServiceImpl = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+
+        TransactionHandler transactionHandler = new TransactionHandler();
+        transactionHandler.setTarget(userServiceImpl);
+        transactionHandler.setTransactionManager(this.transactionManager);
+        transactionHandler.setPattern("upgradeLevels");
+        UserService testUserService = (UserService) Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class[]{ UserService.class },
+                transactionHandler);
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            testUserService.upgradeLevels();
+            fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) { }
+
+        checkLevelUpgraded(users.get(1), false);
     }
 }
