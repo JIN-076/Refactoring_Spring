@@ -5,8 +5,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.mail.MailSender;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -28,6 +31,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.Mockito.*;
 import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
 import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
 
@@ -241,7 +245,6 @@ public class UserServiceTest {
         emailPolicy.setMailSender(mockMailSender);
 
         UserLevelUpgradePolicy userLevelUpgradePolicy = new UserLevelUpgradePolicyImpl(mockUserDao, emailPolicy);
-
         UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao, userLevelUpgradePolicy);
 
         userServiceImpl.upgradeLevels();
@@ -260,5 +263,33 @@ public class UserServiceTest {
     private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
         assertThat(updated.getId()).isEqualTo(expectedId);
         assertThat(updated.getLevel()).isEqualTo(expectedLevel);
+    }
+
+    @Test
+    @DisplayName("Mockito를 이용한 MockUserDao 테스트")
+    public void mockUpgradeLevels() throws Exception {
+        UserDao mockUserDao = mock(UserDao.class);
+        when(mockUserDao.getAll()).thenReturn(this.users);
+
+        MailSender mockMailSender = mock(MailSender.class);
+        emailPolicy.setMailSender(mockMailSender);
+
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new UserLevelUpgradePolicyImpl(mockUserDao, emailPolicy);
+        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao, userLevelUpgradePolicy);
+
+        userServiceImpl.upgradeLevels();
+
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao).update(users.get(1));
+        assertThat(users.get(1).getLevel()).isEqualTo(Level.SILVER);
+        verify(mockUserDao).update(users.get(3));
+        assertThat(users.get(3).getLevel()).isEqualTo(Level.GOLD);
+
+        ArgumentCaptor<SimpleMailMessage> mailMessageArgumentCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        // 파라미터를 정밀하게 검사하기 위해 캡처할 수도 있다.
+        verify(mockMailSender, times(2)).send(mailMessageArgumentCaptor.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArgumentCaptor.getAllValues();
+        assertThat(mailMessages.get(0).getTo()).isEqualTo(users.get(1).getEmail());
+        assertThat(mailMessages.get(1).getTo()).isEqualTo(users.get(3).getEmail());
     }
 }
