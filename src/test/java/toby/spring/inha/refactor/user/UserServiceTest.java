@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -17,9 +18,11 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import toby.spring.inha.refactor.config.DataSourceConfig;
+import toby.spring.inha.refactor.config.TxAdvisorConfig;
 import toby.spring.inha.refactor.config.TxProxyConfig;
 import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
 import toby.spring.inha.refactor.jdk.proxy.TransactionHandler;
+import toby.spring.inha.refactor.proxyfactorybean.TransactionAdvice;
 import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
@@ -46,7 +49,7 @@ import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMME
         basePackages = {"toby.spring.inha.refactor"},
         basePackageClasses = UserServiceImpl.class
 )
-@ContextConfiguration(classes = {TxProxyConfig.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TxAdvisorConfig.class, TransactionAdvice.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
 
     @Autowired
@@ -356,6 +359,33 @@ public class UserServiceTest {
         testUserService.setPolicy(userLevelUpgradePolicy);
 
         TxProxyFactoryBean txProxyFactoryBean = context.getBean("&txProxyFactory", TxProxyFactoryBean.class);
+        txProxyFactoryBean.setTarget(testUserService);
+        UserService txUserService = (UserService) txProxyFactoryBean.getObject();
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            txUserService.upgradeLevels();
+            fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) { }
+
+        checkLevelUpgraded(users.get(1), false);
+    }
+
+    @Test
+    @DisplayName("ProxyFactoryBean 테스트")
+    public void upgradeAllOrNothingAdvisor() {
+        MailSender mockMailSender = mock(MailSender.class);
+        emailPolicy.setMailSender(mockMailSender);
+
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
+        TestUserService testUserService = new TestUserService(this.userDao);
+        testUserService.setPolicy(userLevelUpgradePolicy);
+
+        ProxyFactoryBean txProxyFactoryBean = context.getBean("&proxyFactoryBean", ProxyFactoryBean.class);
         txProxyFactoryBean.setTarget(testUserService);
         UserService txUserService = (UserService) txProxyFactoryBean.getObject();
 

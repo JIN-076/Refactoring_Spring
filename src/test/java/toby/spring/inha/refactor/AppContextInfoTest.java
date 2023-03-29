@@ -4,8 +4,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import toby.spring.inha.refactor.config.DataSourceConfig;
+import toby.spring.inha.refactor.config.TxAdvisorConfig;
 import toby.spring.inha.refactor.config.TxProxyConfig;
 import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
+import toby.spring.inha.refactor.proxyfactorybean.TransactionAdvice;
 import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.config.TransactionConfig;
 import toby.spring.inha.refactor.user.dao.UserDaoJdbc;
@@ -42,8 +44,8 @@ public class AppContextInfoTest {
     // AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppCtx.class, DataSourceConfig.class);
     // AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class);
 
-    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
-            TxProxyConfig.class, DataSourceConfig.class, MailSenderConfig.class, TransactionConfig.class,
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(TransactionAdvice.class,
+            TxAdvisorConfig.class, DataSourceConfig.class, MailSenderConfig.class, TransactionConfig.class,
             UserMapper.class, EmailPolicy.class, UserLevelUpgradePolicyImpl.class,
             UserDaoJdbc.class, UserServiceImpl.class, UserServiceTx.class);
 
