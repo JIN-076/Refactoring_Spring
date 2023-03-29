@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
@@ -15,6 +17,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import toby.spring.inha.refactor.config.DataSourceConfig;
+import toby.spring.inha.refactor.config.TxProxyConfig;
+import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
 import toby.spring.inha.refactor.jdk.proxy.TransactionHandler;
 import toby.spring.inha.refactor.user.config.MailSenderConfig;
 import toby.spring.inha.refactor.user.dao.UserDao;
@@ -42,8 +46,11 @@ import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMME
         basePackages = {"toby.spring.inha.refactor"},
         basePackageClasses = UserServiceImpl.class
 )
-@ContextConfiguration(classes = {EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TxProxyConfig.class, TxProxyFactoryBean.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
+
+    @Autowired
+    private ApplicationContext context;
 
     @Autowired
     private UserService userService;
@@ -76,6 +83,13 @@ public class UserServiceTest {
         public void upgradeLevel(User user) {
             if (user.getId().equals(this.id)) throw new TestUserPolicyException();
             super.upgradeLevel(user);
+        }
+    }
+
+    static class TestUserService extends UserServiceImpl {
+
+        public TestUserService(UserDao userDao) {
+            super(userDao);
         }
     }
 
@@ -147,7 +161,8 @@ public class UserServiceTest {
     public void upgradeAllOrNothing() {
 
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao);
+        testUserService.setPolicy(userLevelUpgradePolicy);
 
         userDao.deleteAll();
         for (User user : users) {
@@ -168,7 +183,8 @@ public class UserServiceTest {
     @DisplayName("Transaction 테스트")
     public void upgradeAllOrNothingRfc() throws Exception {
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao);
+        testUserService.setPolicy(userLevelUpgradePolicy);
         UserServiceTx testUserServiceTx = new UserServiceTx();
 
         testUserServiceTx.setUserService(testUserService);
@@ -193,7 +209,8 @@ public class UserServiceTest {
     @DisplayName("트랜잭션 추상화 API 테스트")
     public void upgradeAllOrNothingRfc2() throws Exception {
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserServiceImpl testUserService = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceImpl testUserService = new UserServiceImpl(this.userDao);
+        testUserService.setPolicy(userLevelUpgradePolicy);
         UserServiceTx testUserServiceTx = new UserServiceTx();
 
         testUserServiceTx.setUserService(testUserService);
@@ -247,7 +264,8 @@ public class UserServiceTest {
         emailPolicy.setMailSender(mockMailSender);
 
         UserLevelUpgradePolicy userLevelUpgradePolicy = new UserLevelUpgradePolicyImpl(mockUserDao, emailPolicy);
-        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao, userLevelUpgradePolicy);
+        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao);
+        userServiceImpl.setPolicy(userLevelUpgradePolicy);
 
         userServiceImpl.upgradeLevels();
 
@@ -277,7 +295,8 @@ public class UserServiceTest {
         emailPolicy.setMailSender(mockMailSender);
 
         UserLevelUpgradePolicy userLevelUpgradePolicy = new UserLevelUpgradePolicyImpl(mockUserDao, emailPolicy);
-        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao, userLevelUpgradePolicy);
+        UserServiceImpl userServiceImpl = new UserServiceImpl(mockUserDao);
+        userServiceImpl.setPolicy(userLevelUpgradePolicy);
 
         userServiceImpl.upgradeLevels();
 
@@ -299,7 +318,8 @@ public class UserServiceTest {
     @DisplayName("TransactionHandler와 다이내믹 프록시를 이용한 테스트")
     public void upgradeAllOrNothingProxy() throws Exception {
         UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
-        UserServiceImpl userServiceImpl = new UserServiceImpl(this.userDao, userLevelUpgradePolicy);
+        UserServiceImpl userServiceImpl = new UserServiceImpl(this.userDao);
+        userServiceImpl.setPolicy(userLevelUpgradePolicy);
 
         TransactionHandler transactionHandler = new TransactionHandler();
         transactionHandler.setTarget(userServiceImpl);
@@ -309,6 +329,35 @@ public class UserServiceTest {
                 getClass().getClassLoader(),
                 new Class[]{ UserService.class },
                 transactionHandler);
+
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            txUserService.upgradeLevels();
+            fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) { }
+
+        checkLevelUpgraded(users.get(1), false);
+    }
+
+    @Test
+    @DirtiesContext
+    @DisplayName("Transaction Factory Bean 테스트")
+    public void upgradeAllOrNothingFactoryBean() throws Exception {
+        MailSender mockMailSender = mock(MailSender.class);
+        emailPolicy.setMailSender(mockMailSender);
+
+        UserLevelUpgradePolicy userLevelUpgradePolicy = new TestUserPolicy(this.userDao, this.emailPolicy, users.get(3).getId());
+        TestUserService testUserService = new TestUserService(this.userDao);
+        testUserService.setPolicy(userLevelUpgradePolicy);
+
+        TxProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", TxProxyFactoryBean.class);
+        txProxyFactoryBean.setTarget(testUserService);
+        UserService txUserService = (UserService) txProxyFactoryBean.getObject();
+
 
         userDao.deleteAll();
         for (User user : users) {

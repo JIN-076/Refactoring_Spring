@@ -21,11 +21,15 @@ public class UserServiceImpl implements UserService {
     public static final int MIN_RECOMMEND_FOR_GOLD = 30;
 
     private final UserDao userDao;
-    private final UserLevelUpgradePolicy policy;
+    private UserLevelUpgradePolicy policy;
 
     @Autowired
-    public UserServiceImpl(UserDao userDao, UserLevelUpgradePolicy policy) {
+    public UserServiceImpl(UserDao userDao) {
         this.userDao = userDao;
+    }
+
+    @Autowired
+    public void setPolicy(UserLevelUpgradePolicy policy) {
         this.policy = policy;
     }
 
