@@ -5,12 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
 import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.service.UserLevelUpgradePolicy;
 import toby.spring.inha.refactor.user.service.UserService;
 import toby.spring.inha.refactor.user.service.UserServiceImpl;
+import toby.spring.inha.refactor.user.service.UserServiceTx;
 
 @Configuration
 public class TxProxyConfig {
@@ -25,12 +27,18 @@ public class TxProxyConfig {
     }
 
     @Bean
-    public TxProxyFactoryBean userService() throws Exception {
+    @Primary
+    public TxProxyFactoryBean txProxyFactory() throws Exception {
         TxProxyFactoryBean txProxyFactoryBean = new TxProxyFactoryBean();
         txProxyFactoryBean.setTarget(this.userService);
         txProxyFactoryBean.setTransactionManager(this.transactionManager);
         txProxyFactoryBean.setPattern("upgradeLevels");
         txProxyFactoryBean.setServiceInterface(UserService.class);
         return txProxyFactoryBean;
+    }
+
+    @Bean(name = "userService")
+    public UserService userService() throws Exception {
+        return (UserService) txProxyFactory().getObject();
     }
 }

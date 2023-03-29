@@ -5,7 +5,7 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.stereotype.Component;
 
 @Setter
-@Component(value = "message")
+//@Component(value = "messageBeans")
 public class MessageFactoryBean implements FactoryBean<Message> {
 
     public String text;

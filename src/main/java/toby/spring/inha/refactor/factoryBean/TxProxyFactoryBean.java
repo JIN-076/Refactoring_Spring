@@ -15,7 +15,6 @@ import toby.spring.inha.refactor.user.service.UserService;
 import java.lang.reflect.Proxy;
 
 @Setter
-@Component
 public class TxProxyFactoryBean implements FactoryBean<Object> {
 
     private Object target;

@@ -8,13 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import toby.spring.inha.refactor.config.MessageConfig;
 import toby.spring.inha.refactor.factoryBean.Message;
 import toby.spring.inha.refactor.factoryBean.MessageFactoryBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {MessageFactoryBean.class})
+@ContextConfiguration(classes = {MessageConfig.class, MessageFactoryBean.class})
 public class FactoryBeanTest {
 
     @Autowired
@@ -25,6 +26,7 @@ public class FactoryBeanTest {
     public void getMessageFromFactoryBean() {
         Object message = context.getBean("message");
         assertThat(message).isInstanceOf(Message.class);
+        assertThat(((Message) message).getText()).isEqualTo("Factory Bean");
     }
 
     @Test

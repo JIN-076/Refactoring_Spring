@@ -14,7 +14,7 @@ import toby.spring.inha.refactor.user.domain.User;
 import javax.sql.DataSource;
 
 @Service
-@Primary
+@Qualifier("userServiceTx")
 public class UserServiceTx implements UserService {
 
     private DataSource dataSource;

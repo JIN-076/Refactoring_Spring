@@ -46,13 +46,14 @@ import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMME
         basePackages = {"toby.spring.inha.refactor"},
         basePackageClasses = UserServiceImpl.class
 )
-@ContextConfiguration(classes = {TxProxyConfig.class, TxProxyFactoryBean.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TxProxyConfig.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
 
     @Autowired
     private ApplicationContext context;
 
     @Autowired
+    @Qualifier("userService")
     private UserService userService;
 
     @Autowired
@@ -354,10 +355,9 @@ public class UserServiceTest {
         TestUserService testUserService = new TestUserService(this.userDao);
         testUserService.setPolicy(userLevelUpgradePolicy);
 
-        TxProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", TxProxyFactoryBean.class);
+        TxProxyFactoryBean txProxyFactoryBean = context.getBean("&txProxyFactory", TxProxyFactoryBean.class);
         txProxyFactoryBean.setTarget(testUserService);
         UserService txUserService = (UserService) txProxyFactoryBean.getObject();
-
 
         userDao.deleteAll();
         for (User user : users) {
