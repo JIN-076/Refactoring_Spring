@@ -37,7 +37,7 @@ public class TxProxyConfig {
         return txProxyFactoryBean;
     }
 
-    @Bean(name = "userService")
+    @Bean(name = "userServiceTx")
     public UserService userService() throws Exception {
         return (UserService) txProxyFactory().getObject();
     }

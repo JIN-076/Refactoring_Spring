@@ -1,10 +1,12 @@
-package toby.spring.inha.refactor.learningTst.jdk;
+package toby.spring.inha.refactor.learningTst.jdk.proxy;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.ClassFilter;
+import org.springframework.aop.Pointcut;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.NameMatchMethodPointcut;
@@ -67,6 +69,48 @@ public class DynamicProxyTest {
         Hello proxiedHello = (Hello) proxyFactoryBean.getObject();
         assertThat(proxiedHello.sayHello("Toby")).isEqualTo("HELLO TOBY");
         assertThat(proxiedHello.sayHi("Toby")).isEqualTo("HI TOBY");
-        assertThat(proxiedHello.sayThankYou("Toby")).isEqualTo("Thank You TOBY");
+        assertThat(proxiedHello.sayThankYou("Toby")).isEqualTo("Thank You Toby");
+    }
+
+    @Test
+    @DisplayName("확장 포인트컷 테스트")
+    public void classNamePointcutAdvisor() {
+        NameMatchMethodPointcut classMethodPointcut = new NameMatchMethodPointcut() {
+            public ClassFilter getClassFilter() {
+                return new ClassFilter() {
+                    @Override
+                    public boolean matches(Class<?> clazz) {
+                        return clazz.getSimpleName().startsWith("HelloT");
+                    }
+                };
+            }
+        };
+        classMethodPointcut.setMappedName("sayH*");
+
+        checkAdviced(new HelloTarget(), classMethodPointcut, true);
+
+        class HelloWorld extends HelloTarget {};
+        checkAdviced(new HelloWorld(), classMethodPointcut, false);
+
+        class HelloToby extends HelloTarget {};
+        checkAdviced(new HelloToby(), classMethodPointcut, true);
+    }
+
+    private void checkAdviced(Object target, Pointcut pointcut, boolean adviced) {
+        ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
+        proxyFactoryBean.setTarget(target);
+        proxyFactoryBean.addAdvisor(new DefaultPointcutAdvisor(pointcut, new UppercaseAdvice()));
+
+        Hello proxiedHello = (Hello) proxyFactoryBean.getObject();
+
+        if (adviced) {
+            assertThat(proxiedHello.sayHello("Toby")).isEqualTo("HELLO TOBY");
+            assertThat(proxiedHello.sayHi("Toby")).isEqualTo("HI TOBY");
+            assertThat(proxiedHello.sayThankYou("Toby")).isEqualTo("Thank You Toby");
+        } else {
+            assertThat(proxiedHello.sayHello("Toby")).isEqualTo("Hello Toby");
+            assertThat(proxiedHello.sayHi("Toby")).isEqualTo("Hi Toby");
+            assertThat(proxiedHello.sayThankYou("Toby")).isEqualTo("Thank You Toby");
+        }
     }
 }

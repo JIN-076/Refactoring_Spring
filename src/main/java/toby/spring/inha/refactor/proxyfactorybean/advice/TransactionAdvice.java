@@ -1,4 +1,4 @@
-package toby.spring.inha.refactor.proxyfactorybean;
+package toby.spring.inha.refactor.proxyfactorybean.advice;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
@@ -37,12 +37,6 @@ public class TransactionAdvice implements MethodInterceptor {
             Object ret = invocation.proceed();
             this.transactionManager.commit(status);
             return ret;
-
-            /**
-             * JDK 다이내믹 프록시가 제공하는 Method와는 달리 스프링의 MethodInvocation을 통한 타깃 호출은
-             * 예외가 포장되지 않고 타깃에서 보낸 그대로 전달된다.
-             */
-
         } catch (RuntimeException e) {
             this.transactionManager.rollback(status);
             throw e;

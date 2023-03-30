@@ -1,7 +1,5 @@
 package toby.spring.inha.refactor.config;
 
-import org.aopalliance.intercept.MethodInterceptor;
-import org.springframework.aop.Pointcut;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.NameMatchMethodPointcut;
@@ -9,10 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import toby.spring.inha.refactor.proxyfactorybean.TransactionAdvice;
+import toby.spring.inha.refactor.proxyfactorybean.advice.TransactionAdvice;
+import toby.spring.inha.refactor.proxyfactorybean.pointcut.NameMatchClassMethodPointcut;
 import toby.spring.inha.refactor.user.service.UserService;
-
-import java.lang.reflect.Method;
 
 @Configuration
 public class TxAdvisorConfig {
@@ -27,8 +24,16 @@ public class TxAdvisorConfig {
     }
 
     @Bean
-    public NameMatchMethodPointcut pointcut() {
+    public NameMatchMethodPointcut simplePointcut() {
         NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
+        pointcut.setMappedName("upgrade*");
+        return pointcut;
+    }
+
+    @Bean
+    public NameMatchClassMethodPointcut pointcut() {
+        NameMatchClassMethodPointcut pointcut = new NameMatchClassMethodPointcut();
+        pointcut.setMappedClassName("*ServiceImpl");
         pointcut.setMappedName("upgrade*");
         return pointcut;
     }
@@ -46,7 +51,7 @@ public class TxAdvisorConfig {
         return proxyFactoryBean;
     }
 
-    @Bean
+    @Bean(name = "userServiceProxy")
     public UserService userService() {
         return (UserService) proxyFactoryBean().getObject();
     }
