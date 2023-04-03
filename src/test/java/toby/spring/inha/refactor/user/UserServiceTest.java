@@ -1,5 +1,6 @@
 package toby.spring.inha.refactor.user;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Component;
@@ -19,10 +21,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
-import toby.spring.inha.refactor.config.BeanPostProcessorConfig;
-import toby.spring.inha.refactor.config.DataSourceConfig;
-import toby.spring.inha.refactor.config.TxAdvisorConfig;
-import toby.spring.inha.refactor.config.TxProxyConfig;
+import toby.spring.inha.refactor.config.*;
 import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
 import toby.spring.inha.refactor.jdk.proxy.TransactionHandler;
 import toby.spring.inha.refactor.proxyfactorybean.advice.TransactionAdvice;
@@ -43,6 +42,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
 import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
@@ -52,7 +52,7 @@ import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMME
         basePackages = {"toby.spring.inha.refactor"},
         basePackageClasses = UserServiceImpl.class
 )
-@ContextConfiguration(classes = {BeanPostProcessorConfig.class, UserServiceTest.class, TxAdvisorConfig.class, TxProxyConfig.class, TransactionAdvice.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@ContextConfiguration(classes = {TxPropertiesConfig.class, BeanPostProcessorConfig.class, UserServiceTest.class, TxAdvisorConfig.class, TxProxyConfig.class, TransactionAdvice.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
 public class UserServiceTest {
 
     @Autowired
@@ -133,6 +133,13 @@ public class UserServiceTest {
             super(userDao);
             this.testPolicy = testPolicy;
             super.setPolicy(this.testPolicy);
+        }
+
+        public List<User> getAll() {
+            for (User user : super.getAll()) {
+                super.update(user);
+            }
+            return null;
         }
     }
 
@@ -457,6 +464,33 @@ public class UserServiceTest {
         } catch (TestUserPolicyException e) { }
 
         checkLevelUpgraded(users.get(1), false);
-        assertThat(AopUtils.isCglibProxy(testUserService)).isTrue();
+        assertThat(AopUtils.isCglibProxy(this.testUserService)).isTrue();
+        assertThat(this.testUserService).isNotInstanceOf(java.lang.reflect.Proxy.class);
+    }
+
+    @Test
+    @DisplayName("AspectJ 포인트컷 적용 테스트")
+    public void upgradeAllOrNothingAspectJ() {
+        userDao.deleteAll();
+        for (User user : users) {
+            userDao.add(user);
+        }
+
+        try {
+            this.testUserService.upgradeLevels();
+            fail("TestUserPolicyException expected");
+        } catch (TestUserPolicyException e) {
+            checkLevelUpgraded(users.get(1), false);
+            assertThat(AopUtils.isJdkDynamicProxy(this.testUserService)).isTrue();
+            assertThat(this.testUserService).isInstanceOf(java.lang.reflect.Proxy.class);
+        }
+    }
+
+    @Test
+    @DisplayName("읽기전용 메서드 테스트")
+    public void readOnlyTransactionAttribute() {
+        assertThrows(TransientDataAccessException.class, () -> {
+            this.testUserService.getAll();
+        });
     }
 }

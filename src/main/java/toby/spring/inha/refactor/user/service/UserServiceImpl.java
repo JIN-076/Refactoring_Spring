@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import toby.spring.inha.refactor.user.dao.UserDao;
 import toby.spring.inha.refactor.user.domain.Level;
@@ -39,6 +40,23 @@ public class UserServiceImpl implements UserService {
             user.setLevel(Level.BASIC);
         }
         userDao.add(user);
+    }
+
+    public void deleteAll() {
+        userDao.deleteAll();
+    }
+
+    @Transactional(readOnly = true)
+    public User get(String id) {
+        return userDao.get(id);
+    }
+
+    public List<User> getAll() {
+        return userDao.getAll();
+    }
+
+    public void update(User user) {
+        userDao.update(user);
     }
 
     public void upgradeLevels() {

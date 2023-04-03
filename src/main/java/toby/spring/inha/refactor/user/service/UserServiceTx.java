@@ -8,10 +8,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import toby.spring.inha.refactor.user.domain.User;
 
 import javax.sql.DataSource;
+import java.util.List;
 
 @Service
 @Qualifier("userServiceTx")
@@ -39,6 +41,27 @@ public class UserServiceTx implements UserService {
     @Override
     public void add(User user) {
         this.userService.add(user);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public User get(String id) {
+        return this.userService.get(id);
+    }
+
+    @Override
+    public List<User> getAll() {
+        return this.userService.getAll();
+    }
+
+    @Override
+    public void deleteAll() {
+        this.userService.deleteAll();
+    }
+
+    @Override
+    public void update(User user) {
+        this.userService.update(user);
     }
 
     @Override
