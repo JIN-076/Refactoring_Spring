@@ -17,10 +17,15 @@ import org.springframework.dao.TransientDataAccessException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Component;
+import org.springframework.test.annotation.Commit;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import toby.spring.inha.refactor.config.*;
 import toby.spring.inha.refactor.factoryBean.TxProxyFactoryBean;
 import toby.spring.inha.refactor.jdk.proxy.TransactionHandler;
@@ -53,6 +58,8 @@ import static toby.spring.inha.refactor.user.service.UserServiceImpl.MIN_RECOMME
         basePackageClasses = UserServiceImpl.class
 )
 @ContextConfiguration(classes = {TxPropertiesConfig.class, BeanPostProcessorConfig.class, UserServiceTest.class, TxAdvisorConfig.class, TxProxyConfig.class, TransactionAdvice.class, EmailPolicy.class, MailSenderConfig.class, TransactionConfig.class, UserServiceImpl.class, UserLevelUpgradePolicyImpl.class, UserDaoJdbc.class, DataSourceConfig.class, UserMapper.class})
+@Transactional
+@Commit
 public class UserServiceTest {
 
     @Autowired
@@ -492,5 +499,67 @@ public class UserServiceTest {
         assertThrows(TransientDataAccessException.class, () -> {
             this.testUserService.getAll();
         });
+    }
+
+    @Test
+    @DisplayName("트랜잭션 매니저를 이용한 테스트")
+    public void transactionSync() {
+        DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
+        txDefinition.setReadOnly(true);
+        TransactionStatus status = this.transactionManager.getTransaction(txDefinition);
+
+        this.userService.deleteAll();
+
+        this.userService.add(users.get(0));
+        this.userService.add(users.get(1));
+
+        this.transactionManager.commit(status);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 매니저를 이용한 롤백 테스트")
+    public void transactionSyncRollback() {
+        this.userDao.deleteAll();
+        assertThat(this.userDao.getCount()).isEqualTo(0);
+
+        DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
+        TransactionStatus status = this.transactionManager.getTransaction(txDefinition);
+
+        this.userService.add(users.get(0));
+        this.userService.add(users.get(1));
+        assertThat(this.userDao.getCount()).isEqualTo(2);
+
+        this.transactionManager.rollback(status);
+        assertThat(this.userDao.getCount()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("전형적인 롤백 테스트")
+    public void transactionSyncRollbackAll() {
+        DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
+        TransactionStatus status = this.transactionManager.getTransaction(txDefinition);
+
+        try {
+            this.userService.deleteAll();
+            this.userService.add(users.get(0));
+            this.userService.add(users.get(1));
+        } finally {
+            this.transactionManager.rollback(status);
+        }
+    }
+
+    @Test
+    @DisplayName("@Transactional 테스트")
+    @Transactional
+    public void transactionSyncAnnotation() {
+        this.userService.deleteAll();
+        this.userService.add(users.get(0));
+        this.userService.add(users.get(1));
+    }
+
+    @Test
+    @DisplayName("@Transactional readOnly 테스트")
+    public void transactionSyncReadOnly() {
+        this.userService.deleteAll();
     }
 }
